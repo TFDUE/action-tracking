@@ -1,0 +1,7 @@
+Type: IPython Notebook Extension
+Name: Action Tracking
+Description: Tracks user actions
+Link: readme.md
+Main: action_tracking.js
+Compatibility: 4.x, 5.x
+Parameters: none
