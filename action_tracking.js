@@ -10,13 +10,15 @@ define([
     outputarea,
 ) {
     let parameters = {
-        "tracking": true
+        "tracking": true,
+        "aggravation": 15000 //TODO (optional) custom aggravation
     }
 
-    //notebook tracking data
-    let data = {
-        "filename": "any",
-        "timestamp": 0,
+    //Tracking functionality
+    let Tracking = function() {
+        let temp_data = { //TODO get from metadata
+        "filename": Jupyter.notebook.notebook_name,
+        "timestamp": Date.now(),
         "total_time": 0,
         "click": 0,
         "mousemove": 0,
@@ -29,12 +31,11 @@ define([
         "cell_create": 0,
         "cell_delete": 0,
         "errors": 0,
-        "disables": 0
-    };
+        };
 
-    //Tracking functionality
-    let Tracking = function() {
-        let temp_data = data
+        let i = -1;
+        let data_points = (60000 / parameters.aggravation);
+        let data_collection = [temp_data,{},{},{}];
 
         $(events).on('create.Cell delete.Cell rendered.MarkdownCell execute.CodeCell output_added.OutputArea', function(event, output) {
             if (parameters.tracking){
@@ -45,7 +46,7 @@ define([
                 else if (event.type == 'output_added') {
                     if (output.output.output_type == "error"){
                         temp_data.errors++;
-                        send_notebook();
+                        prepare_payload(data_collection);
                     }
                 }
             }
@@ -62,39 +63,50 @@ define([
         });
 
         setInterval(function () {
-            data = temp_data;
+            if (!document.hidden && parameters.tracking) {temp_data.total_time += 1000;}
         }, 1000);
 
+        prepare_payload(data_collection);
+
         setInterval(function () {
-            if (!document.hidden && parameters.tracking) {data.total_time += 1000;}
-        }, 1000);
+            temp_data.filename = Jupyter.notebook.notebook_name;
+            temp_data.timestamp = Date.now();
+            i++;
+            console.log(i);
+            if (i >= data_points){
+                i = 0;
+                prepare_payload(data_collection);
+                data_collection = [{},{},{},{}];
+            };
+            data_collection[i] = Object.assign({}, temp_data);
+        }, parameters.aggravation);
     };
 
     //prepare packet for server transfer
-    let prepare_payload = function() {
-        data.filename = Jupyter.notebook.notebook_name;
-        data.timestamp = Date.now();
-        let notebook_snapshot = Jupyter.notebook.toJSON()
+    let prepare_payload = function(data) {
+        let notebook_snapshot = {};
         if (!parameters.tracking) {
             notebook_snapshot = {"tracking":"disabled"};
-        }
+        } else {
+            notebook_snapshot = Jupyter.notebook.toJSON()
+        };
         let packet = {
             "data":data,
             "notebook":notebook_snapshot,
             "user":"na" //TODO
         };
-        return packet
+        send_notebook(packet);
     }
 
 
     // Send packet to server
-    let send_notebook = function() {
+    let send_notebook = function(packet) {
         $.ajax({
             url: 'http://127.0.0.1:5000/add',
             type: "POST",
             contentType: "application/json",
             dataType: "json",
-            data: JSON.stringify(prepare_payload()),
+            data: JSON.stringify(packet),
             success: function() {
                 console.log("success");},
             error: function() {
@@ -110,7 +122,7 @@ define([
     let tracking_handler = function(tracking) {
         if (parameters.tracking){
             parameters.tracking = false;
-            data.disables++;
+            //TODO disables
         } else {
             parameters.tracking = true;
         };
@@ -135,25 +147,10 @@ define([
         ])).find('.btn').attr('id', 'tracking-button');
     }
 
-    let TestButton = function () { //TODO remove
-        Jupyter.toolbar.add_buttons_group([
-            Jupyter.keyboard_manager.actions.register ({
-                help: 'test',
-                icon: 'fa-chevron-up',
-                handler: function(){
-                    Jupyter.notebook.insert_cell_above('markdown').set_text(JSON.stringify(prepare_payload()));
-                }
-            }, 'test', 'Testing'),
-        ])
-    }
-
     // Run on start
     function load_jupyter_extension() {
         TrackingButton();
-        TestButton();
         Tracking();
-        send_notebook();
-        setInterval(send_notebook, 60000);
         //TODO persistence
     }
     return {
