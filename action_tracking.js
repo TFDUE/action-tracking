@@ -27,24 +27,30 @@ define([
         "copy": 0,
         "paste": 0,
         "executes": 0,
+        "execute_ids": [],
         "markdown_renders": 0,
         "cell_create": 0,
         "cell_delete": 0,
         "errors": 0,
+        "error_ids": []
         };
 
         let i = -1;
         let data_points = (60000 / parameters.aggravation);
         let data_collection = [temp_data,{},{},{}];
 
-        $(events).on('create.Cell delete.Cell rendered.MarkdownCell execute.CodeCell output_added.OutputArea', function(event, output) {
+        $(events).on('create.Cell delete.Cell rendered.MarkdownCell execute.CodeCell output_added.OutputArea', function(event, argument) {
             if (parameters.tracking){
                 if (event.type == 'create') {temp_data.cell_create++;}
                 else if (event.type == 'delete') {temp_data.cell_delete++;}
                 else if (event.type == 'rendered') {temp_data.markdown_renders++;}
-                else if (event.type == 'execute') {temp_data.executes++;}
+                else if (event.type == 'execute') {
+                    temp_data.execute_ids.push(Jupyter.notebook.get_selected_cell().id); //TODO testing
+                    temp_data.executes++;
+                }
                 else if (event.type == 'output_added') {
-                    if (output.output.output_type == "error"){
+                    if (argument.output.output_type == "error"){
+                        temp_data.error_ids.push(Jupyter.notebook.get_selected_cell().id); //TODO testing
                         temp_data.errors++;
                         prepare_payload(data_collection);
                     }
@@ -72,7 +78,6 @@ define([
             temp_data.filename = Jupyter.notebook.notebook_name;
             temp_data.timestamp = Date.now();
             i++;
-            console.log(i);
             if (i >= data_points){
                 i = 0;
                 prepare_payload(data_collection);
