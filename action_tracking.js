@@ -16,29 +16,38 @@ define([
 
     //Tracking functionality
     let Tracking = function() {
-        let temp_data = { //TODO get from metadata
-        "filename": Jupyter.notebook.notebook_name,
-        "timestamp": Date.now(),
-        "total_time": 0,
-        "click": 0,
-        "mousemove": 0,
-        "keydown": 0,
-        "scroll": 0, //TODO
-        "copy": 0,
-        "paste": 0,
-        "executes": 0,
-        "execute_ids": [],
-        "markdown_renders": 0,
-        "cell_create": 0,
-        "cell_delete": 0,
-        "errors": 0,
-        "error_ids": []
+        let temp_data = {};
+        if (Jupyter.notebook.metadata.tracking == undefined) {
+            temp_data = {
+                "cell_create": 0,
+                "cell_delete": 0,
+                "click": 0,
+                "copy": 0,
+                "error": 0,
+                "error_ids": [],
+                "execute": 0,
+                "execute_ids": [],
+                "file_id": Math.floor(Math.random() * 100000) + Date.now().toString().slice(-5),
+                "filename": Jupyter.notebook.notebook_name,
+                "keydown": 0,
+                "markdown_renders": 0,
+                "mousemove": 0,
+                "paste": 0,
+                "scroll": 0, //TODO
+                "timestamp": Date.now(),
+                "total_time": 0,
+            };
+            Jupyter.notebook.metadata.tracking = temp_data;
+            Jupyter.notebook.save_notebook();
+        } else {
+            temp_data = Jupyter.notebook.metadata.tracking;
         };
 
         let i = -1;
         let data_points = (60000 / parameters.aggravation);
         let data_collection = [temp_data,{},{},{}];
 
+        //catches Jupyter notebook specific events and updates data object
         $(events).on('create.Cell delete.Cell rendered.MarkdownCell execute.CodeCell output_added.OutputArea', function(event, argument) {
             if (parameters.tracking){
                 if (event.type == 'create') {temp_data.cell_create++;}
@@ -58,6 +67,7 @@ define([
             }
         });
 
+        //catches general input events and updates data object
         $(document).on('click mousemove keydown copy paste delete.Cell', function(event) {
             if (parameters.tracking){
                 if (event.type == 'click'){temp_data.click++;}
@@ -68,12 +78,15 @@ define([
             }
         });
 
+        //tracks time spent on notebook and updates data object
         setInterval(function () {
             if (!document.hidden && parameters.tracking) {temp_data.total_time += 1000;}
         }, 1000);
 
+        //sends the initial data and notebook snapshot
         prepare_payload(data_collection);
 
+        //fills the data collection array every aggravation interval and sends the data and notebook every 60 seconds
         setInterval(function () {
             temp_data.filename = Jupyter.notebook.notebook_name;
             temp_data.timestamp = Date.now();
@@ -87,7 +100,7 @@ define([
         }, parameters.aggravation);
     };
 
-    //prepare packet for server transfer
+    //packages the tracking data, notebook snapshot and user data for server transfer
     let prepare_payload = function(data) {
         let notebook_snapshot = {};
         if (!parameters.tracking) {
@@ -98,13 +111,13 @@ define([
         let packet = {
             "data":data,
             "notebook":notebook_snapshot,
-            "user":"na" //TODO
+            "user":"na" //TODO -> limit output extension
         };
         send_notebook(packet);
     }
 
 
-    // Send packet to server
+    // Sends prepared packet to server
     let send_notebook = function(packet) {
         $.ajax({
             url: 'http://127.0.0.1:5000/add',
@@ -119,15 +132,15 @@ define([
         });
     };
 
-    //Toolbar button handler
+    //Button handler for toggling the tracking functionality
     let tracking_button_handler = function() {
         tracking_handler($('#tracking-button').hasClass('active'));
     };
 
+    //sets the global tracking parameter according to button interaction and changes icons
     let tracking_handler = function(tracking) {
         if (parameters.tracking){
-            parameters.tracking = false;
-            //TODO disables
+            parameters.tracking = false; //TODO (optional) disables tracking
         } else {
             parameters.tracking = true;
         };
@@ -141,7 +154,7 @@ define([
     }
 
 
-    // Toolbar button
+    //initializes the toggling tracking toolbar button
     let TrackingButton = function () {
         $(Jupyter.toolbar.add_buttons_group([
             Jupyter.keyboard_manager.actions.register ({
@@ -152,11 +165,10 @@ define([
         ])).find('.btn').attr('id', 'tracking-button');
     }
 
-    // Run on start
+    //runs on start
     function load_jupyter_extension() {
         TrackingButton();
         Tracking();
-        //TODO persistence
     }
     return {
         load_jupyter_extension : load_jupyter_extension,
