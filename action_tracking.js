@@ -2,20 +2,21 @@ define([
     'jquery',
     'base/js/namespace',
     'base/js/events',
-    'notebook/js/outputarea'
 ], function (
     $,
     Jupyter,
     events,
-    outputarea,
 ) {
-    let parameters = {
-        "tracking": true,
-        "aggravation": 15000 //TODO (optional) custom aggravation
+    let params = {
+        "tracking": false,
+        "firstname": "jane",
+        "lastname": "doe",
+        "email": "jane.doe@example.com",
+        "aggravation": 15000
     }
 
     //Tracking functionality
-    let Tracking = function() {
+    let Tracking = function() { //TODO
         let temp_data = {};
         if (Jupyter.notebook.metadata.tracking == undefined) {
             temp_data = {
@@ -44,22 +45,22 @@ define([
         };
 
         let i = -1;
-        let data_points = (60000 / parameters.aggravation);
+        let data_points = (60000 / params.aggravation);
         let data_collection = [temp_data,{},{},{}];
 
         //catches Jupyter notebook specific events and updates data object
         $(events).on('create.Cell delete.Cell rendered.MarkdownCell execute.CodeCell output_added.OutputArea', function(event, argument) {
-            if (parameters.tracking){
+            if (params.tracking){
                 if (event.type == 'create') {temp_data.cell_create++;}
                 else if (event.type == 'delete') {temp_data.cell_delete++;}
                 else if (event.type == 'rendered') {temp_data.markdown_renders++;}
                 else if (event.type == 'execute') {
-                    temp_data.execute_ids.push(Jupyter.notebook.get_selected_cell().id); //TODO testing
+                    temp_data.execute_ids.push(Jupyter.notebook.get_selected_cell().id);
                     temp_data.executes++;
                 }
                 else if (event.type == 'output_added') {
                     if (argument.output.output_type == "error"){
-                        temp_data.error_ids.push(Jupyter.notebook.get_selected_cell().id); //TODO testing
+                        temp_data.error_ids.push(Jupyter.notebook.get_selected_cell().id);
                         temp_data.errors++;
                         prepare_payload(data_collection);
                     }
@@ -69,7 +70,7 @@ define([
 
         //catches general input events and updates data object
         $(document).on('click mousemove keydown copy paste delete.Cell', function(event) {
-            if (parameters.tracking){
+            if (params.tracking){
                 if (event.type == 'click'){temp_data.click++;}
                 else if (event.type == 'mousemove') {temp_data.mousemove++;}
                 else if (event.type == 'keydown') {temp_data.keydown++;}
@@ -80,10 +81,10 @@ define([
 
         //tracks time spent on notebook and updates data object
         setInterval(function () {
-            if (!document.hidden && parameters.tracking) {temp_data.total_time += 1000;}
+            if (!document.hidden && params.tracking) {temp_data.total_time += 1000;}
         }, 1000);
 
-        //sends the initial data and notebook snapshot
+        //sends the initial data, notebook snapshot and user data
         prepare_payload(data_collection);
 
         //fills the data collection array every aggravation interval and sends the data and notebook every 60 seconds
@@ -97,21 +98,26 @@ define([
                 data_collection = [{},{},{},{}];
             };
             data_collection[i] = Object.assign({}, temp_data);
-        }, parameters.aggravation);
+        }, params.aggravation);
     };
 
     //packages the tracking data, notebook snapshot and user data for server transfer
     let prepare_payload = function(data) {
         let notebook_snapshot = {};
-        if (!parameters.tracking) {
+        if (!params.tracking) {
             notebook_snapshot = {"tracking":"disabled"};
         } else {
             notebook_snapshot = Jupyter.notebook.toJSON()
         };
+        let user = {
+            "email": params.email,
+            "firstname": params.firstname,
+            "lastname": params.lastname,
+        };
         let packet = {
             "data":data,
             "notebook":notebook_snapshot,
-            "user":"na" //TODO -> limit output extension
+            "user": user
         };
         send_notebook(packet);
     }
@@ -138,11 +144,11 @@ define([
     };
 
     //sets the global tracking parameter according to button interaction and changes icons
-    let tracking_handler = function(tracking) {
-        if (parameters.tracking){
-            parameters.tracking = false; //TODO (optional) disables tracking
+    let tracking_handler = function(tracking) { //TODO
+        if (params.tracking){
+            params.tracking = false;
         } else {
-            parameters.tracking = true;
+            params.tracking = true;
         };
 
         var button = $('#tracking-button');
@@ -163,15 +169,39 @@ define([
                 handler: tracking_button_handler
             }, 'toggle-tracking', 'Tracking'),
         ])).find('.btn').attr('id', 'tracking-button');
-    }
+    };
 
-    //runs on start
-    function load_jupyter_extension() {
+    let update_params = function() {
+        var config = Jupyter.notebook.config;
+        for (var key in params) {
+            if (config.data.hasOwnProperty(key) ){
+                params[key] = config.data[key];
+            }
+        }
+    };
+
+    var initialize = function () {
+        update_params();
         TrackingButton();
         Tracking();
-    }
+    };
+
+    //runs on start
+    var load_jupyter_extension = function () {
+        return Jupyter.notebook.config.loaded.then(initialize);
+    };
+
     return {
         load_jupyter_extension : load_jupyter_extension,
         load_ipython_extension : load_jupyter_extension
     };
 });
+
+/** TODO list
+ * scrolling
+ * button icon
+ * example notebook
+ * readme file
+ * nesting and structure
+ * more server functionality
+ */

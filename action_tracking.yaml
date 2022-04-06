@@ -3,5 +3,28 @@ Name: Action Tracking
 Description: Tracks user actions
 Link: readme.md
 Main: action_tracking.js
-Compatibility: 4.x, 5.x
-Parameters: none
+Compatibility: 6.x
+Parameters:
+- name: tracking
+  description: I consent to being tracked according to this <a href="/nbextensions/action_tracking/consent_form.html"> Consent Form</a>
+  input_type: checkbox
+  default: false
+- name: firstname
+  description: Firstname
+  input_type: text
+  default: Jane
+- name: lastname
+  description: Lastname
+  input_type: text
+  default: Doe
+- name: email
+  description: Email adress
+  input_type: text
+  default: jane.doe@example.com
+- name: aggravation
+  description: Time intervals of data capture
+  input_type: number
+  default: 15000
+  step: 0
+  min: 15000
+  max: 15000
