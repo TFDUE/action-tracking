@@ -34,7 +34,7 @@ define([
                 "markdown_renders": 0,
                 "mousemove": 0,
                 "paste": 0,
-                "scroll": 0, //TODO
+                "scroll": 0,
                 "timestamp": Date.now(),
                 "total_time": 0,
             };
@@ -56,12 +56,12 @@ define([
                 else if (event.type == 'rendered') {temp_data.markdown_renders++;}
                 else if (event.type == 'execute') {
                     temp_data.execute_ids.push(Jupyter.notebook.get_selected_cell().id);
-                    temp_data.executes++;
+                    temp_data.execute++;
                 }
                 else if (event.type == 'output_added') {
                     if (argument.output.output_type == "error"){
                         temp_data.error_ids.push(Jupyter.notebook.get_selected_cell().id);
-                        temp_data.errors++;
+                        temp_data.error++;
                         prepare_payload(data_collection);
                     }
                 }
@@ -69,13 +69,14 @@ define([
         });
 
         //catches general input events and updates data object
-        $(document).on('click mousemove keydown copy paste delete.Cell', function(event) {
+        $(document).on('click mousemove keydown copy paste wheel', function(event) {
             if (params.tracking){
                 if (event.type == 'click'){temp_data.click++;}
                 else if (event.type == 'mousemove') {temp_data.mousemove++;}
                 else if (event.type == 'keydown') {temp_data.keydown++;}
                 else if (event.type == 'copy') {temp_data.copy++;}
                 else if (event.type == 'paste') {temp_data.paste++;}
+                else if (event.type == 'wheel') {temp_data.scroll++;}
             }
         });
 
@@ -132,45 +133,38 @@ define([
             dataType: "json",
             data: JSON.stringify(packet),
             success: function() {
-                console.log("success");},
+                console.log("server success");},
             error: function() {
-                console.log("error");},
+                console.log("server error");},
         });
     };
 
-    //Button handler for toggling the tracking functionality
+    //sets the global tracking parameter according to button interaction and changes the icon
     let tracking_button_handler = function() {
-        tracking_handler($('#tracking-button').hasClass('active'));
-    };
-
-    //sets the global tracking parameter according to button interaction and changes icons
-    let tracking_handler = function(tracking) { //TODO
         if (params.tracking){
             params.tracking = false;
         } else {
             params.tracking = true;
         };
-
-        var button = $('#tracking-button');
-        button.toggleClass('active', !tracking);
-
-        var icon = button.find('i');
-        icon.toggleClass('fa-square-check-o', tracking);
-        icon.toggleClass('fa-square-o', !tracking);
+        var icon = $('#tracking-button').find('i');
+        icon.toggleClass('fa-check-square-o fa-square-o');
     }
 
 
-    //initializes the toggling tracking toolbar button
+    //initializes the toggling tracking toolbar button with the according icon
     let TrackingButton = function () {
+        let icon = (params.tracking ? 'fa-check-square-o' : 'fa-square-o');
+
         $(Jupyter.toolbar.add_buttons_group([
             Jupyter.keyboard_manager.actions.register ({
                 help: 'toggle tracking',
-                icon: 'fa-check-square-o',
+                icon: icon,
                 handler: tracking_button_handler
             }, 'toggle-tracking', 'Tracking'),
         ])).find('.btn').attr('id', 'tracking-button');
     };
 
+    //updates the parameters on opening a notebook
     let update_params = function() {
         var config = Jupyter.notebook.config;
         for (var key in params) {
@@ -198,10 +192,11 @@ define([
 });
 
 /** TODO list
- * scrolling
- * button icon
+ * server functionality
+ * ---
+ * nesting
+ * commenting
+ * ---
  * example notebook
  * readme file
- * nesting and structure
- * more server functionality
  */
