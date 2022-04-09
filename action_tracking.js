@@ -116,9 +116,9 @@ define([
             "lastname": params.lastname,
         };
         let packet = {
-            "data":data,
-            "notebook":notebook_snapshot,
-            "user": user
+            "_data":data,
+            "_notebook":notebook_snapshot,
+            "_user": user
         };
         send_notebook(packet);
     }
@@ -192,8 +192,6 @@ define([
 });
 
 /** TODO list
- * server functionality
- * ---
  * nesting
  * commenting
  * ---

@@ -4,14 +4,16 @@ from bson.objectid import ObjectId
 from flask import jsonify, request
 
 
+# adds the notebook to the db
 @app.route('/add', methods=['POST'])
 def add_notebook():
     _json = request.get_json()
-    _name = _json['data']
+    _data = _json['_data']
+    _notebook = _json['_notebook']
+    _user = _json['_user']
     # validate the received values
-    if _name and request.method == 'POST':
-        # save details
-        id = mongo.db.notebooks.insert_one(_json)
+    if _data and _notebook and _user and request.method == 'POST':
+        notebook_mongoid = mongo.db.notebooks.insert_one(_json)
         resp = jsonify('Notebook added successfully!')
         resp.status_code = 200
         return resp
@@ -19,40 +21,51 @@ def add_notebook():
         return not_found()
 
 
+# returns all notebooks
 @app.route('/notebooks')
 def notebooks():
-    notebooks = mongo.db.notebook.find()
+    notebooks = mongo.db.notebooks.find()
     resp = dumps(notebooks)
     return resp
 
 
+# returns all versions of a notebook by file_id
+@app.route('/notebooks/<id>')
+def notebooks_by_id(id):
+    notebooks = mongo.db.notebooks.find({"_notebook.metadata.tracking.file_id": str(id)})
+    resp = dumps(notebooks)
+    return resp
+
+
+# returns all notebooks and respective versions by user id (email)
+@app.route('/usernotebooks/<id>')
+def usernotebooks(id):
+    print(id)
+    notebooks = mongo.db.notebooks.find({"_user.email": str(id)})
+    resp = dumps(notebooks)
+    return resp
+
+
+# returns one notebook by mongodb id
 @app.route('/notebook/<id>')
 def notebook(id):
-    user = mongo.db.notebook.find_one({'_id': ObjectId(id)})
+    notebook = mongo.db.notebooks.find_one({'_id': ObjectId(id)})
     resp = dumps(notebook)
     return resp
 
 
+# update method not supported
 @app.route('/update', methods=['PUT'])
-def update_user():
-    _json = request.get_json()
-    _id = _json['_id']
-    _name = _json['name']
-    # validate the received values
-    if _name and _id and request.method == 'PUT':
-        # save edits
-        mongo.db.notebook.update_one({'_id': ObjectId(_id['$oid']) if '$oid' in _id else ObjectId(_id)},
-                                 {'$set': {'name': _name}})
-        resp = jsonify('Notebook updated successfully!')
-        resp.status_code = 200
-        return resp
-    else:
-        return not_found()
+def update():
+    resp = jsonify('update not supported')
+    resp.status_code = 400
+    return resp
 
 
+# deletes one notebook by mongodb id
 @app.route('/delete/<id>', methods=['DELETE'])
 def delete_notebook(id):
-    mongo.db.notebook.delete_one({'_id': ObjectId(id)})
+    mongo.db.notebooks.delete_one({'_id': ObjectId(id)})
     resp = jsonify('Notebook deleted successfully!')
     resp.status_code = 200
     return resp
