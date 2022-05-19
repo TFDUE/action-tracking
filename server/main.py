@@ -3,6 +3,13 @@ from bson.json_util import dumps
 from bson.objectid import ObjectId
 from flask import jsonify, request
 
+# Adds a welcome message to flask
+@app.route('/')
+def index():
+    return jsonify(
+        status=True,
+        message='Welcome to the Dockerized Flask MongoDB app!'
+    )
 
 # adds the notebook to the db
 @app.route('/add', methods=['POST'])
