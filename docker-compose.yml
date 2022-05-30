@@ -6,11 +6,14 @@ services:
       dockerfile: Dockerfile
     container_name: flask
     ports: 
-      - 5005:5000
+      - 5005:5005
     environment:
+      APP_ENV: "prod"
+      APP_DEBUG: "False"
+      APP_PORT: 5005
       MONGODB_DATABASE: action-tracking
       MONGODB_USERNAME: TFUDE
-      MONGODB_PASSWORD: ibgUaUDs3Ftic4M47C8KdCje
+      MONGODB_PASSWORD: ibgUaUDs3Ftic4M47C8KdCje # Change this!
       MONGODB_HOSTNAME: mongodb
       PGID: 100 # Change / comment for different machine
       PUID: 1008 # Change / comment for different machine
@@ -25,7 +28,7 @@ services:
     command: mongod --auth
     environment:
       MONGO_INITDB_ROOT_USERNAME: TFUDE
-      MONGO_INITDB_ROOT_PASSWORD: ibgUaUDs3Ftic4M47C8KdCje
+      MONGO_INITDB_ROOT_PASSWORD: ibgUaUDs3Ftic4M47C8KdCje # Change this!
       MONGO_INITDB_DATABASE: action-tracking
       MONGODB_DATA_DIR: /data/db
       MONDODB_LOG_DIR: /dev/null
@@ -33,6 +36,8 @@ services:
       PUID: 1008 # Change / comment for different machine
     volumes:
       - ./data/db:/data/db
+# TODO: For db initalization add a init-db.js      
+#      - ./init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
     networks:
       - backend
 
