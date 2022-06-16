@@ -224,12 +224,3 @@ define([
         load_ipython_extension : load_jupyter_extension
     };
 });
-
-/** TODO list
- * prettify code
- * commenting
- * ---
- * example notebook
- * readme file
- * (consent form)
- */
